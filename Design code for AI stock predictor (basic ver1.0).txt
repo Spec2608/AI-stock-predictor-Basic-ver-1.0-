@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Stock Price Predictor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #1e3a8a 0%, #0284c7 100%);
+        }
+        .prediction-card {
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .prediction-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        .ticker-input:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5);
+        }
+        .loading-spinner {
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="gradient-bg text-white">
+        <div class="container mx-auto px-4 py-8">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center space-x-2">
+                    <i class="fas fa-chart-line text-3xl"></i>
+                    <h1 class="text-2xl font-bold">AI Stock Predictor</h1>
+                </div>
+                <nav>
+                    <ul class="flex space-x-6">
+                        <li><a href="#" class="hover:text-blue-200 transition">Home</a></li>
+                        <li><a href="#" class="hover:text-blue-200 transition">About</a></li>
+                        <li><a href="#" class="hover:text-blue-200 transition">API</a></li>
+                        <li><a href="#" class="hover:text-blue-200 transition">Contact</a></li>
+                    </ul>
+                </nav>
+            </div>
+            
+            <div class="mt-16 mb-20 text-center">
+                <h2 class="text-4xl font-bold mb-4">Predict Stock Prices with AI</h2>
+                <p class="text-xl max-w-2xl mx-auto">Our advanced machine learning model analyzes historical data to forecast future stock trends with high accuracy.</p>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-12 -mt-10">
+        <!-- Prediction Form -->
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-12">
+            <div class="flex flex-col md:flex-row items-center">
+                <div class="w-full md:w-2/3 mb-6 md:mb-0 md:pr-6">
+                    <h3 class="text-2xl font-semibold mb-4">Enter Stock Symbol</h3>
+                    <p class="text-gray-600 mb-6">Try popular stocks like AAPL (Apple), MSFT (Microsoft), TSLA (Tesla), or AMZN (Amazon)</p>
+                    
+                    <div class="flex">
+                        <input type="text" id="stockSymbol" placeholder="e.g. AAPL" 
+                            class="ticker-input flex-grow px-4 py-3 rounded-l-lg border border-gray-300 focus:border-blue-500">
+                        <button id="predictBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-r-lg font-medium transition">
+                            Predict Now
+                        </button>
+                    </div>
+                    
+                    <div class="mt-4 flex flex-wrap gap-2">
+                        <button class="quick-ticker bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-full text-sm transition" data-ticker="AAPL">AAPL</button>
+                        <button class="quick-ticker bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-full text-sm transition" data-ticker="MSFT">MSFT</button>
+                        <button class="quick-ticker bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-full text-sm transition" data-ticker="GOOGL">GOOGL</button>
+                        <button class="quick-ticker bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-full text-sm transition" data-ticker="AMZN">AMZN</button>
+                        <button class="quick-ticker bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-full text-sm transition" data-ticker="TSLA">TSLA</button>
+                        <button class="quick-ticker bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-full text-sm transition" data-ticker="NVDA">NVDA</button>
+                    </div>
+                </div>
+                
+                <div class="w-full md:w-1/3 bg-blue-50 rounded-lg p-6">
+                    <h4 class="font-semibold text-lg mb-3">How It Works</h4>
+                    <ul class="space-y-3">
+                        <li class="flex items-start">
+                            <i class="fas fa-database text-blue-500 mt-1 mr-2"></i>
+                            <span>Analyzes 5+ years of historical data</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-brain text-blue-500 mt-1 mr-2"></i>
+                            <span>Uses LSTM neural networks for prediction</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-chart-bar text-blue-500 mt-1 mr-2"></i>
+                            <span>Provides 30-day price forecast</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-bolt text-blue-500 mt-1 mr-2"></i>
+                            <span>Updates predictions in real-time</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading State (Hidden by default) -->
+        <div id="loadingState" class="hidden text-center py-12">
+            <div class="inline-block loading-spinner text-blue-500 text-5xl mb-4">
+                <i class="fas fa-circle-notch"></i>
+            </div>
+            <h3 class="text-xl font-medium">Analyzing stock data and generating predictions...</h3>
+            <p class="text-gray-600 mt-2">This may take a few moments</p>
+        </div>
+
+        <!-- Results Section (Hidden by default) -->
+        <div id="resultsSection" class="hidden">
+            <!-- Stock Summary -->
+            <div class="bg-white rounded-xl shadow-md p-6 mb-8">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center">
+                    <div class="flex items-center mb-4 md:mb-0">
+                        <div id="stockLogo" class="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mr-4">
+                            <i class="fas fa-chart-line text-gray-400"></i>
+                        </div>
+                        <div>
+                            <h2 id="stockName" class="text-2xl font-bold">Apple Inc.</h2>
+                            <div class="flex items-center">
+                                <span id="stockSymbolDisplay" class="text-gray-500 mr-3">AAPL</span>
+                                <span id="currentPrice" class="text-green-500 font-medium">$175.34</span>
+                                <span id="priceChange" class="ml-2 text-sm px-2 py-1 rounded bg-green-100 text-green-800">+2.34%</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex space-x-4">
+                        <div class="text-center">
+                            <div class="text-gray-500 text-sm">Market Cap</div>
+                            <div id="marketCap" class="font-medium">$2.75T</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-gray-500 text-sm">PE Ratio</div>
+                            <div id="peRatio" class="font-medium">28.76</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-gray-500 text-sm">52W High</div>
+                            <div id="week52High" class="font-medium">$198.23</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-gray-500 text-sm">52W Low</div>
+                            <div id="week52Low" class="font-medium">$124.17</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Prediction Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div class="prediction-card bg-white rounded-xl p-6">
+                    <div class="flex justify-between items-start mb-4">
+                        <h3 class="font-semibold text-lg">Next Day</h3>
+                        <div class="px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm">Prediction</div>
+                    </div>
+                    <div class="flex items-end">
+                        <span id="nextDayPrice" class="text-3xl font-bold mr-2">$176.42</span>
+                        <span id="nextDayChange" class="text-green-500 mb-1">+0.62%</span>
+                    </div>
+                    <div class="mt-4 text-sm text-gray-600">
+                        <div class="flex justify-between mb-1">
+                            <span>Confidence:</span>
+                            <span id="nextDayConfidence" class="font-medium">87%</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div id="nextDayConfidenceBar" class="bg-green-500 h-2 rounded-full" style="width: 87%"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="prediction-card bg-white rounded-xl p-6">
+                    <div class="flex justify-between items-start mb-4">
+                        <h3 class="font-semibold text-lg">Next Week</h3>
+                        <div class="px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm">Prediction</div>
+                    </div>
+                    <div class="flex items-end">
+                        <span id="nextWeekPrice" class="text-3xl font-bold mr-2">$178.91</span>
+                        <span id="nextWeekChange" class="text-green-500 mb-1">+2.04%</span>
+                    </div>
+                    <div class="mt-4 text-sm text-gray-600">
+                        <div class="flex justify-between mb-1">
+                            <span>Confidence:</span>
+                            <span id="nextWeekConfidence" class="font-medium">79%</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div id="nextWeekConfidenceBar" class="bg-green-500 h-2 rounded-full" style="width: 79%"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="prediction-card bg-white rounded-xl p-6">
+                    <div class="flex justify-between items-start mb-4">
+                        <h3 class="font-semibold text-lg">Next Month</h3>
+                        <div class="px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm">Prediction</div>
+                    </div>
+                    <div class="flex items-end">
+                        <span id="nextMonthPrice" class="text-3xl font-bold mr-2">$182.56</span>
+                        <span id="nextMonthChange" class="text-green-500 mb-1">+4.12%</span>
+                    </div>
+                    <div class="mt-4 text-sm text-gray-600">
+                        <div class="flex justify-between mb-1">
+                            <span>Confidence:</span>
+                            <span id="nextMonthConfidence" class="font-medium">72%</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div id="nextMonthConfidenceBar" class="bg-green-500 h-2 rounded-full" style="width: 72%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Price Chart -->
+            <div class="bg-white rounded-xl shadow-md p-6 mb-8">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xl font-semibold">30-Day Price Forecast</h3>
+                    <div class="flex space-x-2">
+                        <button class="time-btn active px-3 py-1 rounded-lg bg-blue-100 text-blue-700">1M</button>
+                        <button class="time-btn px-3 py-1 rounded-lg hover:bg-gray-100">3M</button>
+                        <button class="time-btn px-3 py-1 rounded-lg hover:bg-gray-100">6M</button>
+                        <button class="time-btn px-3 py-1 rounded-lg hover:bg-gray-100">1Y</button>
+                    </div>
+                </div>
+                <div class="h-96">
+                    <canvas id="priceChart"></canvas>
+                </div>
+            </div>
+            
+            <!-- Recommendation -->
+            <div class="bg-white rounded-xl shadow-md p-6">
+                <h3 class="text-xl font-semibold mb-4">AI Recommendation</h3>
+                <div class="flex flex-col md:flex-row items-start md:items-center">
+                    <div id="recommendationBadge" class="px-4 py-2 rounded-full bg-green-100 text-green-800 font-medium mb-4 md:mb-0 md:mr-6">
+                        <i class="fas fa-check-circle mr-2"></i>Strong Buy
+                    </div>
+                    <div class="flex-grow">
+                        <p id="recommendationText" class="text-gray-700">
+                            Our AI model suggests this is a strong buying opportunity with high growth potential 
+                            over the next month. The technical indicators show bullish momentum, and fundamentals 
+                            remain strong with consistent earnings growth.
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <div class="text-gray-500 text-sm mb-1">RSI (14)</div>
+                        <div id="rsiValue" class="text-xl font-medium">42.6</div>
+                        <div class="text-green-500 text-sm mt-1">Neutral</div>
+                    </div>
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <div class="text-gray-500 text-sm mb-1">MACD</div>
+                        <div id="macdValue" class="text-xl font-medium">1.23</div>
+                        <div class="text-green-500 text-sm mt-1">Bullish</div>
+                    </div>
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <div class="text-gray-500 text-sm mb-1">Volatility</div>
+                        <div id="volatilityValue" class="text-xl font-medium">22.4%</div>
+                        <div class="text-yellow-500 text-sm mt-1">Medium</div>
+                    </div>
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <div class="text-gray-500 text-sm mb-1">Sentiment</div>
+                        <div id="sentimentValue" class="text-xl font-medium">78%</div>
+                        <div class="text-green-500 text-sm mt-1">Positive</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Sample Stocks Section -->
+        <div class="mt-16">
+            <h3 class="text-2xl font-semibold mb-6">Popular Stocks to Analyze</h3>
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                <div class="sample-stock bg-white p-4 rounded-lg shadow-sm hover:shadow-md transition cursor-pointer" data-ticker="AAPL">
+                    <div class="flex items-center mb-2">
+                        <div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center mr-2">
+                            <i class="fas fa-apple-alt text-gray-500"></i>
+                        </div>
+                        <span class="font-medium">Apple</span>
+                    </div>
+                    <div class="text-gray-500 text-sm">AAPL</div>
+                    <div class="mt-2 text-green-500 font-medium">$175.34 <span class="text-xs">+2.34%</span></div>
+                </div>
+                <div class="sample-stock bg-white p-4 rounded-lg shadow-sm hover:shadow-md transition cursor-pointer" data-ticker="MSFT">
+                    <div class="flex items-center mb-2">
+                        <div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center mr-2">
+                            <i class="fas fa-windows text-blue-500"></i>
+                        </div>
+                        <span class="font-medium">Microsoft</span>
+                    </div>
+                    <div class="text-gray-500 text-sm">MSFT</div>
+                    <div class="mt-2 text-green-500 font-medium">$328.39 <span class="text-xs">+1.87%</span></div>
+                </div>
+                <div class="sample-stock bg-white p-4 rounded-lg shadow-sm hover:shadow-md transition cursor-pointer" data-ticker="GOOGL">
+                    <div class="flex items-center mb-2">
+                        <div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center mr-2">
+                            <i class="fab fa-google text-red-500"></i>
+                        </div>
+                        <span class="font-medium">Alphabet</span>
+                    </div>
+                    <div class="text-gray-500 text-sm">GOOGL</div>
+                    <div class="mt-2 text-red-500 font-medium">$125.64 <span class="text-xs">-0.42%</span></div>
+                </div>
+                <div class="sample-stock bg-white p-4 rounded-lg shadow-sm hover:shadow-md transition cursor-pointer" data-ticker="AMZN">
+                    <div class="flex items-center mb-2">
+                        <div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center mr-2">
+                            <i class="fas fa-shopping-bag text-orange-500"></i>
+                        </div>
+                        <span class="font-medium">Amazon</span>
+                    </div>
+                    <div class="text-gray-500 text-sm">AMZN</div>
+                    <div class="mt-2 text-green-500 font-medium">$128.51 <span class="text-xs">+3.12%</span></div>
+                </div>
+                <div class="sample-stock bg-white p-4 rounded-lg shadow-sm hover:shadow-md transition cursor-pointer" data-ticker="TSLA">
+                    <div class="flex items-center mb-2">
+                        <div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center mr-2">
+                            <i class="fas fa-car text-red-500"></i>
+                        </div>
+                        <span class="font-medium">Tesla</span>
+                    </div>
+                    <div class="text-gray-500 text-sm">TSLA</div>
+                    <div class="mt-2 text-red-500 font-medium">$260.02 <span class="text-xs">-1.25%</span></div>
+                </div>
+                <div class="sample-stock bg-white p-4 rounded-lg shadow-sm hover:shadow-md transition cursor-pointer" data-ticker="NVDA">
+                    <div class="flex items-center mb-2">
+                        <div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center mr-2">
+                            <i class="fas fa-microchip text-green-500"></i>
+                        </div>
+                        <span class="font-medium">NVIDIA</span>
+                    </div>
+                    <div class="text-gray-500 text-sm">NVDA</div>
+                    <div class="mt-2 text-green-500 font-medium">$459.77 <span class="text-xs">+5.63%</span></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-white py-12">
+        <div class="container mx-auto px-4">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                <div>
+                    <h4 class="text-lg font-semibold mb-4">AI Stock Predictor</h4>
+                    <p class="text-gray-400">Using advanced machine learning to forecast stock prices with high accuracy.</p>
+                </div>
+                <div>
+                    <h4 class="text-lg font-semibold mb-4">Resources</h4>
+                    <ul class="space-y-2">
+                        <li><a href="#" class="text-gray-400 hover:text-white transition">Documentation</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white transition">API Reference</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white transition">GitHub</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-lg font-semibold mb-4">Legal</h4>
+                    <ul class="space-y-2">
+                        <li><a href="#" class="text-gray-400 hover:text-white transition">Terms of Service</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white transition">Privacy Policy</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white transition">Disclaimer</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-lg font-semibold mb-4">Subscribe</h4>
+                    <p class="text-gray-400 mb-4">Get the latest predictions and market insights.</p>
+                    <div class="flex">
+                        <input type="email" placeholder="Your email" class="px-4 py-2 rounded-l-lg text-gray-900 w-full">
+                        <button class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-r-lg">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
+                <p>© 2023 AI Stock Predictor. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Sample data for demonstration
+        const sampleData = {
+            "AAPL": {
+                "name": "Apple Inc.",
+                "currentPrice": 175.34,
+                "priceChange": 2.34,
+                "marketCap": "2.75T",
+                "peRatio": 28.76,
+                "week52High": 198.23,
+                "week52Low": 124.17,
+                "predictions": {
+                    "nextDay": { price: 176.42, change: 0.62, confidence: 87 },
+                    "nextWeek": { price: 178.91, change: 2.04, confidence: 79 },
+                    "nextMonth": { price: 182.56, change: 4.12, confidence: 72 }
+                },
+                "recommendation": {
+                    "action": "Strong Buy",
+                    "text": "Our AI model suggests this is a strong buying opportunity with high growth potential over the next month. The technical indicators show bullish momentum, and fundamentals remain strong with consistent earnings growth.",
+                    "indicators": {
+                        "rsi": 42.6,
+                        "macd": 1.23,
+                        "volatility": 22.4,
+                        "sentiment": 78
+                    }
+                },
+                "historical": [170.12, 171.45, 172.89, 173.56, 174.23, 174.89, 175.34],
+                "forecast": [176.42, 177.15, 177.89, 178.32, 178.91, 179.45, 180.12, 180.89, 181.23, 181.78, 182.12, 182.56]
+            },
+            "MSFT": {
+                "name": "Microsoft Corporation",
+                "currentPrice": 328.39,
+                "priceChange": 1.87,
+                "marketCap": "2.44T",
+                "peRatio": 32.15,
+                "week52High": 349.67,
+                "week52Low": 213.43,
+                "predictions": {
+                    "nextDay": { price: 330.12, change: 0.53, confidence: 85 },
+                    "nextWeek": { price: 334.56, change: 1.88, confidence: 76 },
+                    "nextMonth": { price: 341.23, change: 3.91, confidence: 68 }
+                },
+                "recommendation": {
+                    "action": "Buy",
+                    "text": "Microsoft shows steady growth potential with strong cloud performance. The AI model recommends accumulating positions with a 3-month outlook.",
+                    "indicators": {
+                        "rsi": 48.2,
+                        "macd": 0.87,
+                        "volatility": 18.7,
+                        "sentiment": 82
+                    }
+                },
+                "historical": [320.45, 322.12, 324.56, 325.89, 327.12, 327.89, 328.39],
+                "forecast": [330.12, 331.45, 332.78, 333.45, 334.56, 335.89, 336.45, 337.89, 338.56, 339.78, 340.45, 341.23]
+            }
+        };
+
+        // DOM Elements
+        const stockSymbolInput = document.getElementById('stockSymbol');
+        const predictBtn = document.getElementById('predictBtn');
+        const loadingState = document.getElementById('loadingState');
+        const resultsSection = document.getElementById('resultsSection');
+        const quickTickers = document.querySelectorAll('.quick-ticker');
+        const sampleStocks = document.querySelectorAll('.sample-stock');
+        
+        // Chart variables
+        let priceChart = null;
+
+        // Event Listeners
+        predictBtn.addEventListener('click', handlePrediction);
+        quickTickers.forEach(btn => {
+            btn.addEventListener('click', () => {
+                stockSymbolInput.value = btn.dataset.ticker;
+                handlePrediction();
+            });
+        });
+        sampleStocks.forEach(stock => {
+            stock.addEventListener('click', () => {
+                stockSymbolInput.value = stock.dataset.ticker;
+                handlePrediction();
+            });
+        });
+
+        // Handle Prediction
+        function handlePrediction() {
+            const symbol = stockSymbolInput.value.trim().toUpperCase();
+            
+            if (!symbol) {
+                alert('Please enter a stock symbol');
+                return;
+            }
+            
+            // Show loading state
+            loadingState.classList.remove('hidden');
+            resultsSection.classList.add('hidden');
+            
+            // Simulate API call with timeout
+            setTimeout(() => {
+                displayResults(symbol);
+            }, 1500);
+        }
+
+        // Display Results
+        function displayResults(symbol) {
+            // Hide loading, show results
+            loadingState.classList.add('hidden');
+            resultsSection.classList.remove('hidden');
+            
+            // Get sample data for the symbol (or use default if not found)
+            const stockData = sampleData[symbol] || sampleData['AAPL'];
+            
+            // Update stock info
+            document.getElementById('stockName').textContent = stockData.name;
+            document.getElementById('stockSymbolDisplay').textContent = symbol;
+            document.getElementById('currentPrice').textContent = `$${stockData.currentPrice.toFixed(2)}`;
+            
+            const priceChangeElem = document.getElementById('priceChange');
+            if (stockData.priceChange >= 0) {
+                priceChangeElem.textContent = `+${stockData.priceChange.toFixed(2)}%`;
+                priceChangeElem.className = 'ml-2 text-sm px-2 py-1 rounded bg-green-100 text-green-800';
+            } else {
+                priceChangeElem.textContent = `${stockData.priceChange.toFixed(2)}%`;
+                priceChangeElem.className = 'ml-2 text-sm px-2 py-1 rounded bg-red-100 text-red-800';
+            }
+            
+            document.getElementById('marketCap').textContent = `$${stockData.marketCap}`;
+            document.getElementById('peRatio').textContent = stockData.peRatio.toFixed(2);
+            document.getElementById('week52High').textContent = `$${stockData.week52High.toFixed(2)}`;
+            document.getElementById('week52Low').textContent = `$${stockData.week52Low.toFixed(2)}`;
+            
+            // Update predictions
+            updatePredictionCard('nextDay', stockData.predictions.nextDay);
+            updatePredictionCard('nextWeek', stockData.predictions.nextWeek);
+            updatePredictionCard('nextMonth', stockData.predictions.nextMonth);
+            
+            // Update recommendation
+            const recBadge = document.getElementById('recommendationBadge');
+            recBadge.textContent = stockData.recommendation.action;
+            recBadge.className = 'px-4 py-2 rounded-full font-medium mb-4 md:mb-0 md:mr-6 flex items-center';
+            
+            if (stockData.recommendation.action.includes('Buy')) {
+                recBadge.classList.add('bg-green-100', 'text-green-800');
+            } else if (stockData.recommendation.action.includes('Sell')) {
+                recBadge.classList.add('bg-red-100', 'text-red-800');
+            } else {
+                recBadge.classList.add('bg-yellow-100', 'text-yellow-800');
+            }
+            
+            document.getElementById('recommendationText').textContent = stockData.recommendation.text;
+            
+            // Update indicators
+            document.getElementById('rsiValue').textContent = stockData.recommendation.indicators.rsi.toFixed(1);
+            document.getElementById('macdValue').textContent = stockData.recommendation.indicators.macd.toFixed(2);
+            document.getElementById('volatilityValue').textContent = `${stockData.recommendation.indicators.volatility.toFixed(1)}%`;
+            document.getElementById('sentimentValue').textContent = `${stockData.recommendation.indicators.sentiment}%`;
+            
+            // Update chart
+            updateChart(stockData.historical, stockData.forecast);
+        }
+
+        // Update Prediction Card
+        function updatePredictionCard(period, data) {
+            const priceElem = document.getElementById(`${period}Price`);
+            const changeElem = document.getElementById(`${period}Change`);
+            const confidenceElem = document.getElementById(`${period}Confidence`);
+            const confidenceBar = document.getElementById(`${period}ConfidenceBar`);
+            
+            priceElem.textContent = `$${data.price.toFixed(2)}`;
+            
+            if (data.change >= 0) {
+                changeElem.textContent = `+${data.change.toFixed(2)}%`;
+                changeElem.className = 'mb-1 text-green-500';
+            } else {
+                changeElem.textContent = `${data.change.toFixed(2)}%`;
+                changeElem.className = 'mb-1 text-red-500';
+            }
+            
+            confidenceElem.textContent = `${data.confidence}%`;
+            confidenceBar.style.width = `${data.confidence}%`;
+            
+            if (data.confidence > 80) {
+                confidenceBar.className = 'bg-green-500 h-2 rounded-full';
+            } else if (data.confidence > 60) {
+                confidenceBar.className = 'bg-blue-500 h-2 rounded-full';
+            } else {
+                confidenceBar.className = 'bg-yellow-500 h-2 rounded-full';
+            }
+        }
+
+        // Update Chart
+        function updateChart(historical, forecast) {
+            const ctx = document.getElementById('priceChart').getContext('2d');
+            
+            // Destroy previous chart if exists
+            if (priceChart) {
+                priceChart.destroy();
+            }
+            
+            // Prepare labels (dates)
+            const historicalDates = [];
+            const forecastDates = [];
+            const today = new Date();
+            
+            // Historical dates (past 7 days)
+            for (let i = 6; i >= 0; i--) {
+                const date = new Date(today);
+                date.setDate(date.getDate() - i);
+                historicalDates.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+            }
+            
+            // Forecast dates (next 12 days)
+            for (let i = 1; i <= 12; i++) {
+                const date = new Date(today);
+                date.setDate(date.getDate() + i);
+                forecastDates.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+            }
+            
+            // Combine all dates
+            const labels = [...historicalDates, ...forecastDates];
+            
+            // Create chart
+            priceChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Historical Prices',
+                            data: [...historical, ...Array(12).fill(null)],
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            borderWidth: 2,
+                            pointBackgroundColor: '#3b82f6',
+                            pointRadius: 3,
+                            fill: false
+                        },
+                        {
+                            label: 'Forecast Prices',
+                            data: [...Array(7).fill(null), ...forecast],
+                            borderColor: '#10b981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            borderWidth: 2,
+                            borderDash: [5, 5],
+                            pointBackgroundColor: '#10b981',
+                            pointRadius: 3,
+                            fill: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.05)'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                        },
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                usePointStyle: true,
+                            }
+                        }
+                    },
+                    interaction: {
+                        mode: 'nearest',
+                        axis: 'x',
+                        intersect: false
+                    }
+                }
+            });
+        }
+
+        // Initialize with sample data
+        document.addEventListener('DOMContentLoaded', () => {
+            stockSymbolInput.value = 'AAPL';
+            handlePrediction();
+        });
+    </script>
+</body>
+</html>
